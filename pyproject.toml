@@ -1,0 +1,10 @@
+[project]
+name = "git-lite"
+version = "0.1.0"
+ 
+[project.scripts]
+gitlite = "gitlite.cli:main"
+ 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gitlite*"]
