@@ -35,21 +35,35 @@ def repo_find(path: Path = Path("."), required: bool = True):
         return None
     return repo_find(parent, required)
 
-def resolve_ref(repo, ref):
-    """
-    Resolves a reference to a SHA-1 hash.
-    Example: HEAD -> refs/heads/master -> <SHA>
-    If the ref is already a SHA (doesn't exist as a file), returns it as is.
-    """
+def resolve_ref(repo, ref, depth=0):
+    """Resolves a reference (HEAD, branch, or SHA) to a SHA-1 hash."""
+    if depth > 10:
+        raise ValueError(f"Too many symbolic links resolving {ref}")
+
+    # If it looks like a SHA already, return it
+    if len(ref) == 40 and all(c in '0123456789abcdef' for c in ref.lower()):
+        return ref
+
     path = repo.gitdir / ref
 
     if not path.is_file():
-        return ref
+        # Try with refs/heads/ prefix if not found
+        if not ref.startswith("refs/"):
+            alt_path = repo.gitdir / "refs" / "heads" / ref
+            if alt_path.is_file():
+                path = alt_path
+            else:
+                return ref
+        else:
+            return ref
 
-    with open(path, "r") as f:
-        data = f.read().strip()
+    try:
+        with open(path, "r") as f:
+            data = f.read().strip()
+    except IOError as e:
+        raise ValueError(f"Cannot read ref {ref}: {e}")
 
     if data.startswith("ref: "):
-        return resolve_ref(repo, data[5:])
-    
+        return resolve_ref(repo, data[5:], depth + 1)
+
     return data

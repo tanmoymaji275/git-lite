@@ -48,9 +48,14 @@ def object_write(obj, repo=None):
  
     if repo:
         path = repo.gitdir / "objects" / sha[0:2] / sha[2:]
-        if not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "wb") as f:
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # `x` (Exclusive Creation): create only if it doesn't exist
+        try:
+            with open(path, "xb") as f:
                 f.write(zlib.compress(result))
-                
+        except FileExistsError:
+            # Object already exists, which is fine (same content = same SHA)
+            pass
+
     return sha

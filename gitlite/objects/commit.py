@@ -15,7 +15,13 @@ def serialize_kvlm(kvlm):
         for v in val:
             ret += k + b' ' + (v.replace(b'\n', b'\n ')) + b'\n'
 
-    ret += b'\n' + kvlm[None]
+    # Add blank line separator
+    ret += b'\n'
+
+    # Add message if present
+    if None in kvlm:
+        ret += kvlm[None]
+
     return ret
 
 
@@ -41,7 +47,8 @@ class GitCommit(GitObject):
  
         # If no space or newline is found, or newline comes before space, it means we are at the blank line before the message.
         if (spc < 0) or (nl < spc):
-            assert nl == start
+            if nl != start:
+                raise ValueError(f"Invalid commit object: expected blank line at position {start}")
             dct[None] = raw[start+1:]
             return dct
  
@@ -51,8 +58,11 @@ class GitCommit(GitObject):
         end = start
         while True:
             end = raw.find(b'\n', end+1)
-            if raw[end+1] != ord(' '): break
- 
+            if end < 0:
+                raise ValueError("Invalid commit object: unterminated header value")
+            if end + 1 >= len(raw) or raw[end+1] != ord(' '):
+                break
+
         value = raw[spc+1:end].replace(b'\n ', b'\n')
  
         if key in dct:
