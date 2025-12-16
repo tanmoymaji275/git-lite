@@ -65,10 +65,13 @@ def cmd_log(args):
     sha = resolve_ref(repo, sha)
  
     visited = set()
+    queue = [sha]
  
-    while True:
+    while queue:
+        sha = queue.pop(0)
+        
         if sha in visited:
-            break
+            continue
         visited.add(sha)
         
         obj = object_read(repo, sha)
@@ -77,7 +80,7 @@ def cmd_log(args):
             if len(visited) == 1:
                 print(f"fatal: bad object {sha}")
                 sys.exit(128)
-            break
+            continue
             
         if obj.fmt != b'commit':
             print(f"fatal: {sha} is not a commit object")
@@ -98,12 +101,11 @@ def cmd_log(args):
         
         parents = obj.kvlm.get(b'parent')
         if parents:
-            if isinstance(parents, list):
-                sha = parents[0].decode()
-            else:
-                sha = parents.decode()
-        else:
-            break
+            if not isinstance(parents, list):
+                parents = [parents]
+            
+            for p in parents:
+                queue.append(p.decode())
  
 def cmd_ls_tree(args):
     repo = repo_find()
