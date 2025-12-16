@@ -3,13 +3,14 @@ from pathlib import Path
 from .repo import GitRepository, repo_find, resolve_ref
 from .storage import object_read, object_write
 from .objects.blob import GitBlob
-
+from .checkout import checkout_tree
+ 
 def cmd_init(args):
     target = Path(args[0]) if args else Path.cwd()
     repo = GitRepository(target, force=True)
     repo.init()
     print(f"Initialized empty Git repository in {repo.gitdir}")
-
+ 
 def cmd_cat_file(args):
     if len(args) != 2:
         print("usage: gitlite cat-file <type> <object>")
@@ -143,15 +144,56 @@ def cmd_ls_tree(args):
         sha_hex = item['sha']
         
         print(f"{mode.zfill(6)} {type_} {sha_hex}\t{path}")
- 
+
+def cmd_checkout(args):
+    repo = repo_find()
+    
+    if len(args) < 1:
+        print("usage: gitlite checkout <commit>")
+        sys.exit(1)
+        
+    target = args[0]
+    sha = resolve_ref(repo, target)
+    
+    obj = object_read(repo, sha)
+    if not obj:
+        print(f"fatal: reference {target} not found")
+        sys.exit(128)
+        
+    # If it's a commit, get the tree
+    if obj.fmt == b'commit':
+        tree_sha = obj.kvlm[b'tree'].decode()
+        obj = object_read(repo, tree_sha)
+        
+    if obj.fmt != b'tree':
+        print(f"fatal: {target} does not point to a tree or commit")
+        sys.exit(128)
+        
+    # Restore files
+    checkout_tree(repo, obj, repo.worktree)
+    
+    # Update HEAD
+    ref_path = repo.gitdir / "refs" / "heads" / target
+    head_path = repo.gitdir / "HEAD"
+    
+    if ref_path.exists():
+        with open(head_path, "w") as f:
+            f.write(f"ref: refs/heads/{target}\n")
+        print(f"Switched to branch '{target}'")
+    else:
+        with open(head_path, "w") as f:
+            f.write(sha + "\n")
+        print(f"Note: checking out '{sha}'.")
+        print("You are in 'detached HEAD' state.")
+
 commands = {
     "init": cmd_init,
     "cat-file": cmd_cat_file,
     "hash-object": cmd_hash_object,
     "log": cmd_log,
-    "ls-tree": cmd_ls_tree
-}
- 
+    "ls-tree": cmd_ls_tree,
+    "checkout": cmd_checkout
+} 
 def main():
     if len(sys.argv) < 2:
         print("usage: gitlite <command> [<args>]")
