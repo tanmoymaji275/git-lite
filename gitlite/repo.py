@@ -9,7 +9,6 @@ class GitRepository:
         if not force and not self.gitdir.is_dir():
             raise Exception(f"Not a Git repository {path}")
  
-
     def init(self):
         self.worktree.mkdir(parents=True, exist_ok=True)
         self.gitdir.mkdir(parents=True, exist_ok=True)
@@ -24,7 +23,6 @@ class GitRepository:
  
         return self
 
-
 def repo_find(path: Path = Path("."), required: bool = True):
     path = path.resolve()
     if (path / ".git").is_dir():
@@ -36,3 +34,22 @@ def repo_find(path: Path = Path("."), required: bool = True):
             raise Exception("No git directory.")
         return None
     return repo_find(parent, required)
+
+def resolve_ref(repo, ref):
+    """
+    Resolves a reference to a SHA-1 hash.
+    Example: HEAD -> refs/heads/master -> <SHA>
+    If the ref is already a SHA (doesn't exist as a file), returns it as is.
+    """
+    path = repo.gitdir / ref
+
+    if not path.is_file():
+        return ref
+
+    with open(path, "r") as f:
+        data = f.read().strip()
+
+    if data.startswith("ref: "):
+        return resolve_ref(repo, data[5:])
+    
+    return data

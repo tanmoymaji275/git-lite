@@ -1,15 +1,15 @@
 import sys
 from pathlib import Path
-from .repo import GitRepository, repo_find
+from .repo import GitRepository, repo_find, resolve_ref
 from .storage import object_read, object_write
 from .objects.blob import GitBlob
- 
+
 def cmd_init(args):
     target = Path(args[0]) if args else Path.cwd()
     repo = GitRepository(target, force=True)
     repo.init()
     print(f"Initialized empty Git repository in {repo.gitdir}")
- 
+
 def cmd_cat_file(args):
     if len(args) != 2:
         print("usage: gitlite cat-file <type> <object>")
@@ -30,7 +30,7 @@ def cmd_cat_file(args):
         sys.exit(128)
         
     sys.stdout.buffer.write(obj.serialize())
-
+ 
 def cmd_hash_object(args):
     if not args:
         print("usage: gitlite hash-object [-w] <file>")
@@ -57,29 +57,15 @@ def cmd_hash_object(args):
     
     sha = object_write(obj, repo)
     print(sha)
-
+ 
 def cmd_log(args):
     repo = repo_find()
     
     sha = args[0] if args else "HEAD"
-
-    if sha == "HEAD":
-        # Resolve HEAD
-        with open(repo.gitdir / "HEAD", "r") as f:
-            head_ref = f.read().strip()
-        if head_ref.startswith("ref: "):
-            ref_path = repo.gitdir / head_ref[5:]
-            if ref_path.exists():
-                with open(ref_path, "r") as f:
-                    sha = f.read().strip()
-            else:
-                print("HEAD points to an unborn branch (no history yet).")
-                return
-        else:
-            sha = head_ref
-
+    sha = resolve_ref(repo, sha)
+ 
     visited = set()
-
+ 
     while True:
         if sha in visited:
             break
@@ -87,8 +73,11 @@ def cmd_log(args):
         
         obj = object_read(repo, sha)
         if not obj:
-            print(f"fatal: bad object {sha}")
-            sys.exit(128)
+            # If we reached an unborn branch or bad ref
+            if len(visited) == 1:
+                print(f"fatal: bad object {sha}")
+                sys.exit(128)
+            break
             
         if obj.fmt != b'commit':
             print(f"fatal: {sha} is not a commit object")
@@ -100,7 +89,7 @@ def cmd_log(args):
         if author:
             if isinstance(author, list): author = author[0]
             print(f"Author: {author.decode()}")
-
+ 
         print("")
         msg = obj.kvlm[None].decode()
         for line in msg.splitlines():
@@ -110,12 +99,12 @@ def cmd_log(args):
         parents = obj.kvlm.get(b'parent')
         if parents:
             if isinstance(parents, list):
-                sha = parents[0].decode() # Single parent path at-least for now
+                sha = parents[0].decode()
             else:
                 sha = parents.decode()
         else:
             break
-
+ 
 def cmd_ls_tree(args):
     repo = repo_find()
     
@@ -124,22 +113,8 @@ def cmd_ls_tree(args):
         sys.exit(1)
         
     sha = args[0]
-    
-    # Resolve logic
-    if sha == "HEAD":
-         with open(repo.gitdir / "HEAD", "r") as f:
-            head_ref = f.read().strip()
-            if head_ref.startswith("ref: "):
-                ref_path = repo.gitdir / head_ref[5:]
-                if ref_path.exists():
-                    with open(ref_path, "r") as _f:
-                        sha = _f.read().strip()
-                else:
-                    print("HEAD points to an unborn branch.")
-                    return
-            else:
-                sha = head_ref
-
+    sha = resolve_ref(repo, sha)
+ 
     obj = object_read(repo, sha)
     if not obj:
         print(f"fatal: Not a valid object name {sha}", file=sys.stderr)
