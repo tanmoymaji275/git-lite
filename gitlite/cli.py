@@ -3,6 +3,8 @@ from .commands.base import cmd_init, cmd_cat_file, cmd_hash_object
 from .commands.commit import cmd_write_tree, cmd_commit
 from .commands.inspect import cmd_log, cmd_ls_tree
 from .commands.checkout import cmd_checkout
+from .commands.branch import cmd_branch
+from .commands.tag import cmd_tag
  
 commands = {
     "init": cmd_init,
@@ -12,7 +14,9 @@ commands = {
     "commit": cmd_commit,
     "log": cmd_log,
     "ls-tree": cmd_ls_tree,
-    "checkout": cmd_checkout
+    "checkout": cmd_checkout,
+    "branch": cmd_branch,
+    "tag": cmd_tag
 }
  
 def main():

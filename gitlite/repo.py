@@ -53,7 +53,12 @@ def resolve_ref(repo, ref, depth=0):
             if alt_path.is_file():
                 path = alt_path
             else:
-                return ref
+                # Try refs/tags/ prefix
+                alt_path = repo.gitdir / "refs" / "tags" / ref
+                if alt_path.is_file():
+                    path = alt_path
+                else:
+                    return ref
         else:
             return ref
 
