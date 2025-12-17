@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 from .repo import GitRepository, repo_find, resolve_ref
 from .storage import object_read, object_write
@@ -89,11 +90,19 @@ def cmd_commit(args):
     if object_read(repo, parent):
         parents.append(parent)
     
-    # Create Commit
-    # TODO: Simple hardcoded author to be changed later
-    author = "User <user@example.com>"
+    # 3. Create Commit
+    name = os.environ.get("GIT_AUTHOR_NAME", "Anonymous")
+    email = os.environ.get("GIT_AUTHOR_EMAIL", "anonymous@example.com")
+    author = f"{name} <{email}>"
+    
     timestamp = int(time.time())
-    timezone = "+0530"
+    
+    # Calculate timezone offset
+    offset = -time.timezone if (time.localtime().tm_isdst == 0) else -time.altzone
+    offset_hours = offset // 3600
+    offset_minutes = (offset % 3600) // 60
+    timezone = f"{offset_hours:+03d}{offset_minutes:02d}"
+    
     author_str = f"{author} {timestamp} {timezone}"
     
     commit = GitCommit()
