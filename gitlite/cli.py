@@ -4,6 +4,7 @@ from .repo import GitRepository, repo_find, resolve_ref
 from .storage import object_read, object_write
 from .objects.blob import GitBlob
 from .checkout import checkout_tree
+from .staging import write_tree_recursive
  
 def cmd_init(args):
     target = Path(args[0]) if args else Path.cwd()
@@ -57,6 +58,11 @@ def cmd_hash_object(args):
         repo = repo_find()
     
     sha = object_write(obj, repo)
+    print(sha)
+
+def cmd_write_tree(args):
+    repo = repo_find()
+    sha = write_tree_recursive(repo, repo.worktree)
     print(sha)
  
 def cmd_log(args):
@@ -190,6 +196,7 @@ commands = {
     "init": cmd_init,
     "cat-file": cmd_cat_file,
     "hash-object": cmd_hash_object,
+    "write-tree": cmd_write_tree,
     "log": cmd_log,
     "ls-tree": cmd_ls_tree,
     "checkout": cmd_checkout
