@@ -3,8 +3,10 @@ from pathlib import Path
 from .repo import GitRepository, repo_find, resolve_ref
 from .storage import object_read, object_write
 from .objects.blob import GitBlob
+from .objects.commit import GitCommit
 from .checkout import checkout_tree
 from .staging import write_tree_recursive
+import time
  
 def cmd_init(args):
     target = Path(args[0]) if args else Path.cwd()
@@ -61,9 +63,66 @@ def cmd_hash_object(args):
     print(sha)
 
 def cmd_write_tree(args):
+    if args:
+        print("usage: gitlite write-tree")
+        sys.exit(1)
     repo = repo_find()
     sha = write_tree_recursive(repo, repo.worktree)
     print(sha)
+
+def cmd_commit(args):
+    repo = repo_find()
+    
+    message = "No message"
+    if len(args) >= 2 and args[0] == "-m":
+        message = args[1]
+    else:
+        print("usage: gitlite commit -m <message>")
+        sys.exit(1)
+        
+    tree_sha = write_tree_recursive(repo, repo.worktree)
+    
+    parent = resolve_ref(repo, "HEAD")
+    parents = []
+    
+    # Check if parent resolves to a valid object (i.e., not unborn)
+    if object_read(repo, parent):
+        parents.append(parent)
+    
+    # Create Commit
+    # TODO: Simple hardcoded author to be changed later
+    author = "User <user@example.com>"
+    timestamp = int(time.time())
+    timezone = "+0530"
+    author_str = f"{author} {timestamp} {timezone}"
+    
+    commit = GitCommit()
+    commit.kvlm = {
+        b'tree': tree_sha.encode(),
+        b'parent': [p.encode() for p in parents],
+        b'author': author_str.encode(),
+        b'committer': author_str.encode(),
+        None: message.encode() + b'\n'
+    }
+    
+    commit_sha = object_write(commit, repo)
+    
+    # Update HEAD
+    with open(repo.gitdir / "HEAD", "r") as f:
+        head_data = f.read().strip()
+        
+    if head_data.startswith("ref: "):
+        # Update the branch ref
+        ref_path = repo.gitdir / head_data[5:]
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(ref_path, "w") as f:
+            f.write(commit_sha + "\n")
+        print(f"[{head_data[5:]} {commit_sha}] {message}")
+    else:
+        # Detached HEAD
+        with open(repo.gitdir / "HEAD", "w") as f:
+            f.write(commit_sha + "\n")
+        print(f"[detached HEAD {commit_sha}] {message}")
  
 def cmd_log(args):
     repo = repo_find()
@@ -197,6 +256,7 @@ commands = {
     "cat-file": cmd_cat_file,
     "hash-object": cmd_hash_object,
     "write-tree": cmd_write_tree,
+    "commit": cmd_commit,
     "log": cmd_log,
     "ls-tree": cmd_ls_tree,
     "checkout": cmd_checkout
