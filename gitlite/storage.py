@@ -3,41 +3,52 @@ import zlib
 from .objects.blob import GitBlob
 from .objects.commit import GitCommit
 from .objects.tree import GitTree
+from .pack.packfile import GitPack
+from .pack.types import OBJ_COMMIT, OBJ_TREE, OBJ_BLOB, OBJ_TAG
+ 
+def object_read_raw(repo, sha):
+
+    # 1. Try loose object
+    path = repo.gitdir / "objects" / sha[0:2] / sha[2:]
+    
+    if path.is_file():
+        with open(path, "rb") as f:
+            raw = zlib.decompress(f.read())
+            
+        x = raw.find(b' ')
+        fmt = raw[0:x]
+        y = raw.find(b'\x00', x)
+        
+        if fmt == b'commit': type_num = OBJ_COMMIT
+        elif fmt == b'tree': type_num = OBJ_TREE
+        elif fmt == b'blob': type_num = OBJ_BLOB
+        elif fmt == b'tag': type_num = OBJ_TAG
+        else:
+            raise Exception(f"Unknown type {fmt} in loose object")
+            
+        return type_num, raw[y+1:]
+ 
+    # 2. Try packfiles
+    pack_dir = repo.gitdir / "objects" / "pack"
+    if pack_dir.is_dir():
+        for idx_file in pack_dir.glob("*.idx"):
+            pack = GitPack(idx_file, resolve_base_fn=lambda s: object_read_raw(repo, s))
+            offset = pack.find_offset(sha)
+            if offset is not None:
+                return pack.get_raw_object(offset)
+                
+    return None, None
  
 def object_read(repo, sha):
-    path = repo.gitdir / "objects" / sha[0:2] / sha[2:]
- 
-    if not path.is_file():
+    type_num, data = object_read_raw(repo, sha)
+    if type_num is None:
         return None
- 
-    with open(path, "rb") as f:
-        raw = zlib.decompress(f.read()) # b'<type> <size>\x00<payload>
- 
-    # Read object type
-    x = raw.find(b' ')
-    fmt = raw[0:x]
- 
-    # Read and validate object size
-    y = raw.find(b'\x00', x)
-    size = int(raw[x+1:y].decode("ascii"))
-    if size != len(raw)-y-1:
-        raise Exception(f"Malformed object {sha}: bad length")
- 
-    # Pick constructor
-    OBJECT_TYPES = {
-        b'blob': GitBlob,
-        b'commit': GitCommit,
-        b'tree': GitTree
-    }
-
-    if fmt in OBJECT_TYPES:
-        c = OBJECT_TYPES[fmt]
-    else:
-        # Other object types can be added later
-        raise Exception(f"Unknown type {fmt.decode('ascii')} for object {sha}")
- 
-    # Call constructor
-    return c(raw[y+1:])
+        
+    if type_num == OBJ_COMMIT: return GitCommit(data)
+    if type_num == OBJ_TREE: return GitTree(data)
+    if type_num == OBJ_BLOB: return GitBlob(data)
+    # Tag not implemented fully
+    return None
  
 def object_write(obj, repo=None):
     """Serialize the object, compute its SHA-1 hash, and optionally write it to the repository."""
@@ -49,7 +60,7 @@ def object_write(obj, repo=None):
     if repo:
         path = repo.gitdir / "objects" / sha[0:2] / sha[2:]
         path.parent.mkdir(parents=True, exist_ok=True)
-
+ 
         # `x` (Exclusive Creation): create only if it doesn't exist
         try:
             with open(path, "xb") as f:
@@ -57,5 +68,5 @@ def object_write(obj, repo=None):
         except FileExistsError:
             # Object already exists, which is fine (same content = same SHA)
             pass
-
+ 
     return sha
