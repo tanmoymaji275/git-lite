@@ -3,6 +3,7 @@ import zlib
 from .objects.blob import GitBlob
 from .objects.commit import GitCommit
 from .objects.tree import GitTree
+from .objects.tag import GitTag
 from .pack.packfile import GitPack
 from .pack.types import OBJ_COMMIT, OBJ_TREE, OBJ_BLOB, OBJ_TAG
  
@@ -47,7 +48,7 @@ def object_read(repo, sha):
     if type_num == OBJ_COMMIT: return GitCommit(data)
     if type_num == OBJ_TREE: return GitTree(data)
     if type_num == OBJ_BLOB: return GitBlob(data)
-    # Tag not implemented fully
+    if type_num == OBJ_TAG: return GitTag(data)
     return None
  
 def object_write(obj, repo=None):

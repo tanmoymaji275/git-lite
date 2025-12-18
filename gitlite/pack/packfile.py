@@ -5,6 +5,7 @@ from .delta import patch_delta
 from ..objects.blob import GitBlob
 from ..objects.tree import GitTree
 from ..objects.commit import GitCommit
+from ..objects.tag import GitTag
 from .types import OBJ_COMMIT, OBJ_TREE, OBJ_BLOB, OBJ_TAG, OBJ_OFS_DELTA, OBJ_REF_DELTA
  
 class GitPack:
@@ -98,6 +99,7 @@ class GitPack:
         if type_num == OBJ_COMMIT: return GitCommit(data)
         if type_num == OBJ_TREE: return GitTree(data)
         if type_num == OBJ_BLOB: return GitBlob(data)
+        if type_num == OBJ_TAG: return GitTag(data)
         return None
 
     def get_raw_object(self, offset):

@@ -1,8 +1,8 @@
 from .base import GitObject
 from .kvlm import kvlm_parse, kvlm_serialize
  
-class GitCommit(GitObject):
-    fmt = b'commit'
+class GitTag(GitObject):
+    fmt = b'tag'
  
     def __init__(self, data=None):
         self.kvlm = dict()
