@@ -6,6 +6,7 @@ from .commands.checkout import cmd_checkout
 from .commands.branch import cmd_branch
 from .commands.tag import cmd_tag
 from .commands.config import cmd_config
+from .commands.diff import cmd_diff
  
 commands = {
     "init": cmd_init,
@@ -18,7 +19,8 @@ commands = {
     "checkout": cmd_checkout,
     "branch": cmd_branch,
     "tag": cmd_tag,
-    "config": cmd_config
+    "config": cmd_config,
+    "diff": cmd_diff
 }
  
 def main():
