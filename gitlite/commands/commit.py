@@ -1,10 +1,9 @@
 import sys
-import os
-import time
 from ..repo import repo_find, resolve_ref
 from ..storage import object_read, object_write
 from ..objects.commit import GitCommit
 from ..staging import write_tree_recursive
+from ..utils import get_signature
 
 def cmd_write_tree(args):
     if args:
@@ -35,18 +34,7 @@ def cmd_commit(args):
         parents.append(parent)
     
     # 3. Create Commit
-    name = os.environ.get("GIT_AUTHOR_NAME", "Anonymous")
-    email = os.environ.get("GIT_AUTHOR_EMAIL", "anonymous@example.com")
-    author = f"{name} <{email}>"
-    
-    timestamp = int(time.time())
-    
-    offset = -time.timezone if (time.localtime().tm_isdst == 0) else -time.altzone
-    offset_hours = offset // 3600
-    offset_minutes = (offset % 3600) // 60
-    timezone = f"{offset_hours:+03d}{offset_minutes:02d}"
-    
-    author_str = f"{author} {timestamp} {timezone}"
+    author_str = get_signature()
     
     commit = GitCommit()
     commit.kvlm = {

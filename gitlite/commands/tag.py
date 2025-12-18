@@ -1,10 +1,9 @@
 import sys
-import os
-import time
 from ..repo import repo_find, resolve_ref
 from ..storage import object_read, object_write
 from ..objects.tag import GitTag
-
+from ..utils import get_signature
+ 
 def cmd_tag(args):
     repo = repo_find()
     
@@ -13,12 +12,12 @@ def cmd_tag(args):
         tags_dir = repo.gitdir / "refs" / "tags"
         if not tags_dir.exists():
             return
-
+ 
         tags = sorted(os.listdir(tags_dir))
         for tag in tags:
             print(tag)
         return
-
+ 
     # Parse args
     annotated = False
     message = None
@@ -47,7 +46,7 @@ def cmd_tag(args):
     if not name:
         print("usage: gitlite tag [-a] [-m msg] <name> [object]")
         sys.exit(1)
-
+ 
     sha = resolve_ref(repo, target)
     if not sha:
         print(f"fatal: Failed to resolve '{target}' as a valid ref.")
@@ -63,17 +62,7 @@ def cmd_tag(args):
         # Headers: object, type, tag, tagger
         
         type_str = obj.fmt.decode()
-        
-        tagger = os.environ.get("GIT_AUTHOR_NAME", "Anonymous")
-        email = os.environ.get("GIT_AUTHOR_EMAIL", "anonymous@example.com")
-        
-        timestamp = int(time.time())
-        offset = -time.timezone if (time.localtime().tm_isdst == 0) else -time.altzone
-        offset_hours = offset // 3600
-        offset_minutes = (offset % 3600) // 60
-        timezone = f"{offset_hours:+03d}{offset_minutes:02d}"
-        
-        tagger_str = f"{tagger} <{email}> {timestamp} {timezone}"
+        tagger_str = get_signature()
         
         if not message:
             message = "Tag " + name
