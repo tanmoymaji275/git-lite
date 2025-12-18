@@ -34,7 +34,7 @@ def cmd_commit(args):
         parents.append(parent)
     
     # 3. Create Commit
-    author_str = get_signature()
+    author_str = get_signature(repo)
     
     commit = GitCommit()
     commit.kvlm = {

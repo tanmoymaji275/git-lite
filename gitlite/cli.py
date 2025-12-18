@@ -5,6 +5,7 @@ from .commands.inspect import cmd_log, cmd_ls_tree
 from .commands.checkout import cmd_checkout
 from .commands.branch import cmd_branch
 from .commands.tag import cmd_tag
+from .commands.config import cmd_config
  
 commands = {
     "init": cmd_init,
@@ -16,7 +17,8 @@ commands = {
     "ls-tree": cmd_ls_tree,
     "checkout": cmd_checkout,
     "branch": cmd_branch,
-    "tag": cmd_tag
+    "tag": cmd_tag,
+    "config": cmd_config
 }
  
 def main():

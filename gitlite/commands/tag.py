@@ -1,3 +1,4 @@
+import os
 import sys
 from ..repo import repo_find, resolve_ref
 from ..storage import object_read, object_write
@@ -62,7 +63,7 @@ def cmd_tag(args):
         # Headers: object, type, tag, tagger
         
         type_str = obj.fmt.decode()
-        tagger_str = get_signature()
+        tagger_str = get_signature(repo)
         
         if not message:
             message = "Tag " + name
