@@ -7,7 +7,18 @@ from .commands.branch import cmd_branch
 from .commands.tag import cmd_tag
 from .commands.config import cmd_config
 from .commands.diff import cmd_diff
+from .help import show_help
  
+def cmd_help(args):
+    if args:
+        command = args[0]
+        if command.startswith("-"):
+            show_help()
+        else:
+            show_help(command)
+    else:
+        show_help()
+
 commands = {
     "init": cmd_init,
     "cat-file": cmd_cat_file,
@@ -20,23 +31,30 @@ commands = {
     "branch": cmd_branch,
     "tag": cmd_tag,
     "config": cmd_config,
-    "diff": cmd_diff
+    "diff": cmd_diff,
+    "help": cmd_help
 }
  
 def main():
-    if len(sys.argv) < 2:
-        print("usage: gitlite <command> [<args>]")
-        sys.exit(1)
- 
-    cmd = sys.argv[1]
+    args = sys.argv[1:]
+    
+    if not args or args[0] in ["-h", "--help"]:
+        show_help()
+        sys.exit(0)
+        
+    cmd = args[0]
     if cmd in commands:
+        if len(args) > 1 and args[1] in ["-h", "--help"]:
+             show_help(cmd)
+             sys.exit(0)
+             
         try:
-            commands[cmd](sys.argv[2:])
+            commands[cmd](args[1:])
         except Exception as e:
             print(f"gitlite {cmd}: {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        print(f"unknown command: {cmd}")
+        print(f"gitlite: '{cmd}' is not a gitlite command. See 'gitlite --help'.")
         sys.exit(1)
  
 if __name__ == "__main__":

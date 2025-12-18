@@ -5,7 +5,7 @@ from ..repo import repo_find, resolve_ref
 def cmd_branch(args):
     repo = repo_find()
     
-    if not args:
+    if not args or args[0] == "--list":
         # List branches
         heads_dir = repo.gitdir / "refs" / "heads"
         if not heads_dir.exists():
